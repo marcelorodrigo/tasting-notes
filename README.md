@@ -62,3 +62,7 @@ pnpm test:e2e --debug
 ```sh
 pnpm lint
 ```
+
+
+## Credits
+- Logo by [Darius Dan](https://www.svgrepo.com/svg/317504/wine-and-cheese-national-culture-paris)
