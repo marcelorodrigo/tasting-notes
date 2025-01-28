@@ -1,0 +1,63 @@
+name: Build and Deploy
+on:
+  push:
+    branches:
+      - master
+jobs:
+  sonarqube:
+    name: SonarQube
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout
+        with:
+          fetch-depth: 0
+      - uses: pnpm/action-setup@v4
+        name: Configure PNPM
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        name: Configure Node
+        with:
+          node-version: '22'
+          cache: 'pnpm'
+      - name: Install Dependencies
+        run: pnpm install
+      - name: Build
+        run: pnpm build
+      - name: ESLint
+        run: pnpm run lint:check
+      - name: Formatting
+        run: pnpm run format:check
+      - name: Test
+        run: pnpm run test:unit
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+      - name: Playwright Tests
+        run: pnpm run test:e2e
+      - name: SonarQube Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      - name: Upload build
+        uses: actions/upload-artifact@v4
+        with:
+          name: build
+          path: dist
+          retention-days: 1
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    depends-on: sonarqube
+    - name: Download build
+      uses: actions/download-artifact@v4
+      with:
+        name: build
+        path: dist
+    - name: Deploy
+      uses: cloudflare/wrangler-action@v3
+      with:
+        apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        command: pages deploy dist/ --project-name=tasting-notes
+
